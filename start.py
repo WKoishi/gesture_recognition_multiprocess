@@ -48,12 +48,12 @@ def Recognize(cap_stack, result_list, lock, STOP, count) -> None:
             lock.release()
             
             #测试用###############################
-            with lock:
-                count.value += 1
-                print(count.value)
-                if count.value >= 200:
-                    STOP.value = 1
-                    break
+            # with lock:
+            #     count.value += 1
+            #     #print(count.value)
+            #     if count.value >= 200:
+            #         STOP.value = 1
+            #         break
             #####################################
         else:
             lock.release()
@@ -66,7 +66,6 @@ def Recognize(cap_stack, result_list, lock, STOP, count) -> None:
             break
 
 
-
 #输出处理
 def Result_Process(result_list, lock, STOP) -> None:
     print('Process to result process: %s' % getpid())
@@ -75,7 +74,7 @@ def Result_Process(result_list, lock, STOP) -> None:
     filter_buff = np.zeros(filter_len, dtype=np.uint8)  #储存过去30次的识别结果
     while 1:
         # 在新获得4个及以上的手势识别结果时进行处理
-        if filter_len > len(result_list) >= 4: 
+        if filter_len-1 > len(result_list) >= 4: 
             lock.acquire()
             length = len(result_list)
             filter_buff = np.roll(filter_buff, length)  #将滤波数组的元素向后滚动length个单位
@@ -85,15 +84,13 @@ def Result_Process(result_list, lock, STOP) -> None:
             lock.release()
 
             hist = np.bincount(filter_buff)  #统计数组中各个手势的出现次数
-            max_count = np.max(hist)
             #当某一手势出现的次数大于数组长度的一半时，则认为该手势是可信的
-            if max_count >= int(filter_len/2):
+            if hist.max() >= int(filter_len/2):
                 result_val = np.argmax(hist)
-                #print(result_val)
+                print(result_val)
 
         if STOP.value == 1:
             break
-
 
 
 if __name__ == '__main__':
@@ -105,28 +102,28 @@ if __name__ == '__main__':
     Count = Manager().Value('d',0)  #测试用
 
     #摄像头读取图片进程
-    pw = Process(target=Cam_Write, args=(cap_stack, 10, lock, STOP))
+    pCW = Process(target=Cam_Write, args=(cap_stack, 10, lock, STOP))
 
     #手势识别进程
-    pr1 = Process(target=Recognize, args=(cap_stack, result_list, lock, STOP, Count))
-    pr2 = Process(target=Recognize, args=(cap_stack, result_list, lock, STOP, Count))
+    pR1 = Process(target=Recognize, args=(cap_stack, result_list, lock, STOP, Count))
+    pR2 = Process(target=Recognize, args=(cap_stack, result_list, lock, STOP, Count))
 
     #手势识别结果的处理进程
-    pRp = Process(target=Result_Process, args=(result_list, lock, STOP))
+    pRP = Process(target=Result_Process, args=(result_list, lock, STOP))
 
-    pw.start()
+    pCW.start()
 
     start = perf_counter()
-    pr1.start()
-    pr2.start()
-    pRp.start()
+    pR1.start()
+    pR2.start()
+    pRP.start()
 
-    pr1.join()
-    pr2.join()
+    pR1.join()
+    pR2.join()
     finish = perf_counter()
 
-    pRp.join()
-    pw.join()
+    pRP.join()
+    pCW.join()
 
     print(finish-start)
 
