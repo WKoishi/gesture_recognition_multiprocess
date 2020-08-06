@@ -9,7 +9,7 @@
 '''
 
 from phi_contour import Find_Contour, Eucledian_Distance
-from skin_detect import Ellipse_Skin_Detect
+from skin_detect_otsu import Bodyskin_Detect_Otsu
 import cv2
 import numpy as np
 from time import perf_counter, sleep
@@ -21,8 +21,8 @@ err_times=0
 time_add,nor_times=0,0
 
 def Gestures_Recognize(frame):
-    
-    skin = Ellipse_Skin_Detect(frame)
+
+    skin = Bodyskin_Detect_Otsu(frame)
 
     ndefects,right_cont=Find_Contour(skin)
 
@@ -41,7 +41,7 @@ def Gestures_Recognize(frame):
         x,y,w,h = cv2.boundingRect(right_cont)
         frame = cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
 
-    #cv2.imshow('skin',skin)
+    cv2.imshow('skin',skin)
     cv2.imshow('origin',frame)
 
     return ndefects
